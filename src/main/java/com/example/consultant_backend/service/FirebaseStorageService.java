@@ -91,9 +91,7 @@ public class FirebaseStorageService {
     }
 
     private String extractFileNameFromUrl(String url) {
-        // Extract filename from Firebase Storage URL
         if (url.contains("firebasestorage.googleapis.com")) {
-            // Extract from URL like: https://firebasestorage.googleapis.com/v0/b/bucket/o/path%2Ffile.jpg?alt=media
             String encoded = url.substring(url.indexOf("/o/") + 3, url.indexOf("?alt=media"));
             return encoded.replace("%2F", "/");
         } else if (url.contains("storage.googleapis.com")) {

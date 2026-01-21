@@ -84,6 +84,7 @@ public class AppointmentService {
                 savedAppointment.getAppointmentDate(),
                 savedAppointment.getAppointmentTime()
         );
+        fcmNotificationService.notifyUserAppointmentRejected(savedAppointment.getUser(),savedAppointment);
         List<Appointment> pendingList = getPendingAppointments(savedAppointment.getDoctor().getId());
         webSocketNotificationService.updateDoctorPendingList(savedAppointment.getDoctor().getId(), pendingList);
 

@@ -17,6 +17,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Service
 public class FCMNotificationService {
+
     @Async
     public void notifyDoctorNewAppointment(Doctor doctor, Appointment appointment) {
         String fcmToken = doctor.getFcmToken();
@@ -36,12 +37,14 @@ public class FCMNotificationService {
             data.put("appointmentTime", appointment.getAppointmentTime()
                     .format(DateTimeFormatter.ofPattern("hh:mm a")));
             data.put("status", appointment.getStatus().toString());
+
             Notification notification = Notification.builder()
                     .setTitle("🔔 New Appointment Request")
                     .setBody(appointment.getUser().getName() + " requested an appointment on "
                             + appointment.getAppointmentDate().format(DateTimeFormatter.ofPattern("dd MMM yyyy"))
                             + " at " + appointment.getAppointmentTime().format(DateTimeFormatter.ofPattern("hh:mm a")))
                     .build();
+
             AndroidConfig androidConfig = AndroidConfig.builder()
                     .setPriority(AndroidConfig.Priority.HIGH)
                     .setNotification(AndroidNotification.builder()
@@ -122,7 +125,6 @@ public class FCMNotificationService {
         }
     }
 
-    // Send notification to user when appointment is rejected
     @Async
     public void notifyUserAppointmentRejected(User user, Appointment appointment) {
         String fcmToken = user.getFcmToken();
@@ -171,6 +173,58 @@ public class FCMNotificationService {
             log.error("Failed to send rejection FCM to user {}: {}", user.getId(), e.getMessage());
         } catch (Exception e) {
             log.error("Unexpected error sending FCM to user {}", user.getId(), e);
+        }
+    }
+
+    @Async
+    public void notifyUserPrescriptionUploaded(User user, Appointment appointment) {
+        String fcmToken = user.getFcmToken();
+
+        if (fcmToken == null || fcmToken.isEmpty()) {
+            log.warn("User {} has no FCM token registered", user.getId());
+            return;
+        }
+
+        try {
+            Map<String, String> data = new HashMap<>();
+            data.put("type", "PRESCRIPTION_UPLOADED");
+            data.put("appointmentId", String.valueOf(appointment.getId()));
+            data.put("doctorName", appointment.getDoctor().getName());
+            data.put("appointmentDate", appointment.getAppointmentDate().toString());
+            data.put("prescriptionUrl", appointment.getPrescriptionImageUrl() != null
+                    ? appointment.getPrescriptionImageUrl() : "");
+            data.put("medicineUrl", appointment.getMedicineImageUrl() != null
+                    ? appointment.getMedicineImageUrl() : "");
+
+            Notification notification = Notification.builder()
+                    .setTitle("📋 Prescription Available")
+                    .setBody("Dr. " + appointment.getDoctor().getName()
+                            + " has uploaded your prescription. Tap to view.")
+                    .build();
+
+            AndroidConfig androidConfig = AndroidConfig.builder()
+                    .setPriority(AndroidConfig.Priority.HIGH)
+                    .setNotification(AndroidNotification.builder()
+                            .setSound("default")
+                            .setColor("#2196F3")
+                            .setChannelId("prescription_notifications")
+                            .build())
+                    .build();
+
+            Message message = Message.builder()
+                    .setToken(fcmToken)
+                    .setNotification(notification)
+                    .putAllData(data)
+                    .setAndroidConfig(androidConfig)
+                    .build();
+
+            String response = FirebaseMessaging.getInstance().send(message);
+            log.info("Successfully sent prescription FCM to user {}: {}", user.getId(), response);
+
+        } catch (FirebaseMessagingException e) {
+            log.error("Failed to send prescription FCM to user {}: {}", user.getId(), e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error sending prescription FCM to user {}", user.getId(), e);
         }
     }
 }

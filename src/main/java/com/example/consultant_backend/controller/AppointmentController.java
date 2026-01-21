@@ -5,6 +5,7 @@ import com.example.consultant_backend.common.ApiResponse;
 import com.example.consultant_backend.model.Appointment;
 import com.example.consultant_backend.service.AppointmentService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
@@ -23,11 +24,11 @@ import java.util.Map;
 @CrossOrigin(origins = "*")
 public class AppointmentController {
 
-    private final AppointmentService appointmentService;
-    private final SimpMessagingTemplate messagingTemplate;
+    @Autowired
+    private AppointmentService appointmentService;
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
 
-
-    // User books appointment
     @PostMapping("/book")
     public ResponseEntity<ApiResponse<Appointment>> bookAppointment(
             @RequestParam Long userId,
