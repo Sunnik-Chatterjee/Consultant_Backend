@@ -64,4 +64,71 @@ public class EmailService {
             log.error("Failed to send rejection email to {}", userEmail, e);
         }
     }
+
+    @Async
+    public void sendOtpEmail(String email, String otp, String userName) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(email);
+            message.setSubject("Your OTP Verification Code");
+            message.setText(String.format(
+                    "Dear %s,\n\n" +
+                            "Your OTP verification code is: %s\n\n" +
+                            "This code will expire in 5 minutes.\n" +
+                            "Do not share this code with anyone.\n\n" +
+                            "Thank you,\n" +
+                            "Healthcare Team",
+                    userName, otp
+            ));
+            mailSender.send(message);
+            log.info("OTP email sent to {}", email);
+        } catch (Exception e) {
+            log.error("Failed to send OTP email to {}", email, e);
+        }
+    }
+
+    @Async
+    public void sendPasswordResetEmail(String email, String userName, String otp) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(email);
+            message.setSubject("Password Reset Request");
+            message.setText(String.format(
+                    "Dear %s,\n\n" +
+                            "Your password reset OTP is: %s\n\n" +
+                            "This code will expire in 5 minutes.\n\n" +
+                            "Thank you,\n" +
+                            "Healthcare Team",
+                    userName, otp
+            ));
+            mailSender.send(message);
+            log.info("Password reset email sent to {}", email);
+        } catch (Exception e) {
+            log.error("Failed to send password reset email to {}", email, e);
+        }
+    }
+
+    @Async
+    public void sendLoginOtpEmail(String email, String userName, String otp) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(email);
+            message.setSubject("Login Verification Code");
+            message.setText(String.format(
+                    "Dear %s,\n\n" +
+                            "Your login verification OTP is: %s\n\n" +
+                            "This code will expire in 5 minutes.\n" +
+                            "If you didn't request this, please ignore this email.\n\n" +
+                            "Thank you,\n" +
+                            "Healthcare Team",
+                    userName, otp
+            ));
+            mailSender.send(message);
+            log.info("Login OTP email sent to {}", email);
+        } catch (Exception e) {
+            log.error("Failed to send login OTP email to {}", email, e);
+        }
+    }
+
+
 }

@@ -2,14 +2,14 @@ package com.example.consultant_backend.model;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Getter;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
+
+import java.time.Instant;
 
 @Entity
-@Table(name="doctors")
-@Getter
-@Setter
+@Table(name = "doctors")
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class Doctor {
@@ -17,12 +17,33 @@ public class Doctor {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true,nullable = false)
+    private String name;
+
+    @Column(unique = true, nullable = false)
     private String email;
 
-    private String name;
-    private String imageUrl;
-    private String password;
+    private String password;  // Set by admin
+    private String googleId;  // NULL if only email/password
+
     private String phoneNumber;
+    private String imageUrl;
+    private String specialization;  // e.g., "Cardiologist", "Dermatologist"
     private String fcmToken;
+
+    @Column(name = "created_at", updatable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at")
+    private Instant updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = Instant.now();
+        updatedAt = Instant.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = Instant.now();
+    }
 }
