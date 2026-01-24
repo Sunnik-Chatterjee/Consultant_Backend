@@ -1,14 +1,16 @@
 package com.example.consultant_backend.controller;
 
-
 import com.example.consultant_backend.common.ApiResponse;
 import com.example.consultant_backend.model.Appointment;
 import com.example.consultant_backend.model.Doctor;
-import com.example.consultant_backend.repo.DoctorRepo;
+import com.example.consultant_backend.service.DoctorService;
 import com.example.consultant_backend.service.PrescriptionService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -18,24 +20,104 @@ import java.util.List;
 @RequestMapping("/api/doctors")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
+@Slf4j
 public class DoctorController {
+
     @Autowired
-    private DoctorRepo doctorRepo;
+    private DoctorService doctorService;
     @Autowired
     private PrescriptionService prescriptionService;
 
+    /**
+     * Get all doctors (Public endpoint)
+     */
     @GetMapping
     public ResponseEntity<ApiResponse<List<Doctor>>> getAllDoctors() {
+        log.info("📋 Get all doctors");
+
+        List<Doctor> doctors = doctorService.getAllDoctors();
+
         return ResponseEntity.ok(
-                ApiResponse.success("Doctors retrieved", doctorRepo.findAll())
+                ApiResponse.success("Doctors retrieved", doctors)
         );
     }
 
-    @PostMapping("/upload-images/{appointmentId}")
+    /**
+     * Get doctor by ID (Public endpoint)
+     */
+    @GetMapping("/{doctorId}")
+    public ResponseEntity<ApiResponse<Doctor>> getDoctorById(@PathVariable Long doctorId) {
+        log.info("🔍 Get doctor by ID: {}", doctorId);
+
+        Doctor doctor = doctorService.getDoctorById(doctorId);
+
+        return ResponseEntity.ok(
+                ApiResponse.success("Doctor retrieved", doctor)
+        );
+    }
+
+    /**
+     * Get current logged-in doctor's profile
+     * Uses JWT token to identify doctor
+     */
+    @GetMapping("/profile")
+    public ResponseEntity<ApiResponse<Doctor>> getCurrentDoctorProfile(
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        log.info("📋 Get profile request from doctor: {}", userDetails.getUsername());
+
+        Doctor doctor = doctorService.getDoctorByEmail(userDetails.getUsername());
+
+        return ResponseEntity.ok(
+                ApiResponse.success("Doctor profile retrieved", doctor)
+        );
+    }
+
+    /**
+     * Get current doctor's appointments
+     */
+    @GetMapping("/appointments")
+    public ResponseEntity<ApiResponse<List<Appointment>>> getCurrentDoctorAppointments(
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        log.info("📅 Get appointments for doctor: {}", userDetails.getUsername());
+
+        Doctor doctor = doctorService.getDoctorByEmail(userDetails.getUsername());
+        List<Appointment> appointments = doctorService.getDoctorAppointments(doctor.getId());
+
+        return ResponseEntity.ok(
+                ApiResponse.success("Appointments retrieved", appointments)
+        );
+    }
+
+    /**
+     * Update current doctor's profile
+     */
+    @PutMapping("/profile")
+    public ResponseEntity<ApiResponse<Doctor>> updateCurrentDoctorProfile(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestBody Doctor updatedDoctor
+    ) {
+        log.info("✏️ Update profile for doctor: {}", userDetails.getUsername());
+
+        Doctor doctor = doctorService.getDoctorByEmail(userDetails.getUsername());
+        Doctor updated = doctorService.updateDoctorProfile(doctor.getId(), updatedDoctor);
+
+        return ResponseEntity.ok(
+                ApiResponse.success("Profile updated successfully", updated)
+        );
+    }
+
+    /**
+     * Upload prescription & medicine images
+     */
+    @PostMapping("/appointments/{appointmentId}/upload-images")
     public ResponseEntity<ApiResponse<Appointment>> uploadImages(
             @PathVariable Long appointmentId,
             @RequestParam(value = "prescriptionImage", required = false) MultipartFile prescriptionImage,
-            @RequestParam(value = "medicineImage", required = false) MultipartFile medicineImage) {
+            @RequestParam(value = "medicineImage", required = false) MultipartFile medicineImage
+    ) {
+        log.info("📤 Upload images for appointment: {}", appointmentId);
 
         if (prescriptionImage == null && medicineImage == null) {
             return ResponseEntity.badRequest()
