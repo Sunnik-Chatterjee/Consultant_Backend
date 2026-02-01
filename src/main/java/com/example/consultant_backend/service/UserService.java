@@ -89,12 +89,14 @@ public class UserService {
 
         User user = getUserById(userId);
 
-        // Use mapper to update user entity
         userMapper.updateUserFromDTO(updateDTO, user);
+
+        user.setProfileCompleted(true);
 
         User savedUser = userRepo.save(user);
         log.info("✅ Profile updated successfully for user ID: {}", userId);
 
         return savedUser;
     }
+
 }
