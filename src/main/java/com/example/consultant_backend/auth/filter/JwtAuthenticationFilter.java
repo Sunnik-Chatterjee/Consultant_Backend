@@ -1,14 +1,14 @@
 package com.example.consultant_backend.auth.filter;
 
 import com.example.consultant_backend.auth.service.JwtService;
+import com.example.consultant_backend.model.User;
+import com.example.consultant_backend.repo.UserRepo;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -22,14 +22,15 @@ import java.util.Collections;
 @RequiredArgsConstructor
 @Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
-    @Autowired
-    private JwtService jwtService;
+
+    private final JwtService jwtService;
+    private final UserRepo userRepo;  // ✅ Add this
 
     @Override
     protected void doFilterInternal(
-            @NonNull HttpServletRequest request,
-            @NonNull HttpServletResponse response,
-            @NonNull FilterChain filterChain
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain
     ) throws ServletException, IOException {
 
         // Skip JWT validation for public endpoints
@@ -52,41 +53,46 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             // Remove "Bearer " prefix
             String token = authHeader.substring(7);
 
-            // Extract email from token
-            String email = jwtService.extractEmail(token);
+            // ✅ Extract USER ID from token (not email)
+            Long userId = jwtService.extractUserId(token);
 
-            // If email exists and no authentication is set yet
-            if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            // If userId exists and no authentication is set yet
+            if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
                 // Validate token
-                if (jwtService.validateToken(token, email)) {
+                if (jwtService.validateToken(token)) {  // ✅ Simplified - no email param needed
 
-                    // Create authentication token
-                    UsernamePasswordAuthenticationToken authToken =
-                            new UsernamePasswordAuthenticationToken(
-                                    email,                      // Principal (user identifier)
-                                    null,                       // Credentials (not needed after auth)
-                                    Collections.emptyList()     // Authorities/Roles (can add later)
-                            );
+                    // ✅ Load user details using userId
+                    User user = userRepo.findById(userId)
+                            .orElse(null);
 
-                    // Set additional details
-                    authToken.setDetails(
-                            new WebAuthenticationDetailsSource().buildDetails(request)
-                    );
+                    if (user != null) {
+                        // Create authentication token with userId as principal
+                        UsernamePasswordAuthenticationToken authToken =
+                                new UsernamePasswordAuthenticationToken(
+                                        userId.toString(),  // ✅ Use userId as principal
+                                        null,               // Credentials (not needed)
+                                        Collections.emptyList()  // Authorities (add roles later if needed)
+                                );
 
-                    // Set authentication in security context
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                        // Set additional details
+                        authToken.setDetails(
+                                new WebAuthenticationDetailsSource().buildDetails(request)
+                        );
 
-                    log.debug("JWT authentication successful for user: {}", email);
+                        // Set authentication in security context
+                        SecurityContextHolder.getContext().setAuthentication(authToken);
+
+                        log.debug("JWT authentication successful for userId: {}", userId);
+                    }
                 } else {
-                    log.warn("Invalid JWT token for email: {}", email);
+                    log.warn("Invalid JWT token for userId: {}", userId);
                 }
             }
 
         } catch (Exception e) {
             log.error("JWT authentication error: {}", e.getMessage());
-            // Don't throw exception, let the request continue
-            // Spring Security will handle unauthorized access
+            // Continue without authentication - Spring Security will handle 401
         }
 
         // Continue filter chain
@@ -98,7 +104,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
      */
     private boolean isPublicEndpoint(String path) {
         return path.startsWith("/api/auth/") ||
-                path.equals("/api/doctors/all") ||
+                path.equals("/api/doctors") ||  // ✅ Doctors list is public
                 path.startsWith("/swagger-ui") ||
                 path.startsWith("/v3/api-docs") ||
                 path.startsWith("/swagger-resources") ||

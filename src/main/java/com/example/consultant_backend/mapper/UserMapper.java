@@ -25,8 +25,7 @@ public class UserMapper {
                 user.getGender(),
                 user.getPreviousDisease(),
                 user.getPhoneNumber(),
-                user.getEmailVerified(),
-                user.getCreatedAt()
+                isProfileCompleted(user)
         );
     }
 
@@ -66,13 +65,17 @@ public class UserMapper {
 
         if (dto.getPreviousDisease() != null) {
             // Allow empty string to clear previous disease
-            user.setPreviousDisease(dto.getPreviousDisease().trim());
+            String trimmed = dto.getPreviousDisease().trim();
+            user.setPreviousDisease(trimmed.isEmpty() ? null : trimmed);
             log.debug("Updated previous disease");
         }
 
-        if (dto.getImageUrl() != null && !dto.getImageUrl().trim().isEmpty()) {
-            user.setImageUrl(dto.getImageUrl().trim());
-            log.debug("Updated image URL");
-        }
+        // imageUrl intentionally ignored for v1 (not in DTO/entity usage now)
+    }
+
+    private boolean isProfileCompleted(User user) {
+        return user.getAge() != null
+                && user.getGender() != null && !user.getGender().isBlank()
+                && user.getPhoneNumber() != null && !user.getPhoneNumber().isBlank();
     }
 }

@@ -72,7 +72,7 @@ public class DoctorAuthService {
                 .orElseThrow(() -> new RuntimeException("Doctor not found"));
 
         // Generate token
-        String token = jwtService.generateToken(doctor.getEmail());
+        String token = jwtService.generateToken(doctor.getId());
 
         log.info("Doctor logged in after OTP verification: {}", doctor.getEmail());
         return authMapper.toAuthResponse(doctor, token);
@@ -108,7 +108,7 @@ public class DoctorAuthService {
         }
 
         // 5. Generate JWT token (No OTP needed for Google)
-        String token = jwtService.generateToken(doctor.getEmail());
+        String token = jwtService.generateToken(doctor.getId());
 
         log.info("Doctor logged in via Google: {}", email);
         return authMapper.toAuthResponse(doctor, token);

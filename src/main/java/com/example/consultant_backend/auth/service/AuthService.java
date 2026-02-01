@@ -3,6 +3,7 @@ package com.example.consultant_backend.auth.service;
 import com.example.consultant_backend.dto.auth.AuthRequestDTO;
 import com.example.consultant_backend.dto.auth.AuthResponseDTO;
 import com.example.consultant_backend.dto.auth.GoogleAuthRequestDTO;
+import com.example.consultant_backend.dto.auth.OtpVerificationDTO;
 import com.example.consultant_backend.mapper.AuthMapper;
 import com.example.consultant_backend.model.OtpType;
 import com.example.consultant_backend.model.User;
@@ -22,21 +23,19 @@ public class AuthService {
     private final UserRepo userRepo;
     private final OtpService otpService;
     private final JwtService jwtService;
-    private final GoogleAuthService googleAuthService;  // ✅ Add this
+    private final GoogleAuthService googleAuthService;
     private final AuthMapper authMapper;
     private final PasswordEncoder passwordEncoder;
 
     /**
-     * User Registration with Email & Password
+     * User Registration with Email & Password (Signup)
      */
     @Transactional
     public void registerUser(AuthRequestDTO request) {
-        // Check if email already exists
         if (userRepo.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email already registered");
         }
 
-        // Create user
         User user = authMapper.toUserEntity(request);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setEmailVerified(false);
@@ -52,8 +51,7 @@ public class AuthService {
      * Verify OTP after registration
      */
     @Transactional
-    public AuthResponseDTO verifyRegistrationOtp(AuthRequestDTO request) {
-        // Verify OTP
+    public AuthResponseDTO verifyRegistrationOtp(OtpVerificationDTO request) {
         boolean valid = otpService.verifyOtp(
                 request.getEmail(),
                 request.getOtp(),
@@ -64,45 +62,40 @@ public class AuthService {
             throw new RuntimeException("Invalid or expired OTP");
         }
 
-        // Update user verification status
         User user = userRepo.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         user.setEmailVerified(true);
         userRepo.save(user);
 
-        // Generate token
-        String token = jwtService.generateToken(user.getEmail());
+        // ✅ Generate token with userId
+        String token = jwtService.generateToken(user.getId());
 
         log.info("User email verified: {}", user.getEmail());
         return authMapper.toAuthResponse(user, token);
     }
 
     /**
-     * User Login with Email & Password
+     * User Login with Email & Password (Signin)
      */
     public AuthResponseDTO loginUser(AuthRequestDTO request) {
-        // Find user
         User user = userRepo.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("Invalid email or password"));
 
-        // Check if password exists
         if (user.getPassword() == null) {
             throw new RuntimeException("No password set. Please use Google Sign-In or reset password.");
         }
 
-        // Verify password
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new RuntimeException("Invalid email or password");
         }
 
-        // Check if email verified
         if (!user.getEmailVerified()) {
             throw new RuntimeException("Email not verified. Please verify your email first.");
         }
 
-        // Generate token
-        String token = jwtService.generateToken(user.getEmail());
+        // ✅ Generate token with userId
+        String token = jwtService.generateToken(user.getId());
 
         log.info("User logged in: {}", user.getEmail());
         return authMapper.toAuthResponse(user, token);
@@ -110,21 +103,20 @@ public class AuthService {
 
     /**
      * Google Sign-In (Auto create account if not exists)
-     * ✅ ADD THIS METHOD
      */
     @Transactional
     public AuthResponseDTO googleSignIn(GoogleAuthRequestDTO request) {
-        // 1. Verify Google token
+        // Verify Google token
         GoogleIdToken.Payload payload = googleAuthService.verifyGoogleToken(request.getIdToken());
 
-        // 2. Extract user info
+        // Extract user info
         String email = googleAuthService.extractEmail(payload);
         String googleId = googleAuthService.extractGoogleId(payload);
         String name = googleAuthService.extractName(payload);
         String imageUrl = googleAuthService.extractPictureUrl(payload);
         Boolean emailVerified = googleAuthService.isEmailVerified(payload);
 
-        // 3. Check if user exists
+        // Check if user exists
         User user = userRepo.findByEmail(email).orElse(null);
 
         if (user == null) {
@@ -152,8 +144,8 @@ public class AuthService {
             }
         }
 
-        // 4. Generate JWT token
-        String token = jwtService.generateToken(user.getEmail());
+        // ✅ Generate token with userId
+        String token = jwtService.generateToken(user.getId());
 
         log.info("User logged in via Google: {}", email);
         return authMapper.toAuthResponse(user, token);
@@ -164,11 +156,9 @@ public class AuthService {
      */
     @Transactional
     public void forgotPassword(String email) {
-        // Check if user exists
         User user = userRepo.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Send OTP
         otpService.sendOtp(user.getEmail(), user.getName(), OtpType.PASSWORD_RESET);
 
         log.info("Password reset OTP sent to: {}", email);
@@ -179,7 +169,6 @@ public class AuthService {
      */
     @Transactional
     public void resetPassword(AuthRequestDTO request) {
-        // Verify OTP
         boolean valid = otpService.verifyOtp(
                 request.getEmail(),
                 request.getOtp(),
@@ -190,7 +179,6 @@ public class AuthService {
             throw new RuntimeException("Invalid or expired OTP");
         }
 
-        // Update password
         User user = userRepo.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 

@@ -1,10 +1,7 @@
 target/
-!target/*.jar
-.mvn/
 .git/
-.gitignore
+README.md
+.dockerignore
+.railway/
 .env
-*.md
-.DS_Store
-.idea/
-*.iml
+node_modules/

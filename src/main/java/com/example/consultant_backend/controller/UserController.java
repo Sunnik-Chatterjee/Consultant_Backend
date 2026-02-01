@@ -23,8 +23,7 @@ import java.util.Map;
 @Slf4j
 public class UserController {
 
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
 
     /**
      * Get current logged-in user's profile

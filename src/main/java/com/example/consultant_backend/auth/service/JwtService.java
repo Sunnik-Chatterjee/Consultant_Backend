@@ -2,123 +2,92 @@ package com.example.consultant_backend.auth.service;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
+import java.security.Key;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.Function;
 
 @Service
-@Slf4j
 public class JwtService {
 
     @Value("${jwt.secret}")
     private String secret;
 
-    @Value("${jwt.expiration}")
+    @Value("${jwt.expiration:86400000}") // 24 hours (default)
     private Long expiration;
 
-    /**
-     * Generate JWT token
-     */
-    public String generateToken(String email) {
-        Map<String, Object> claims = new HashMap<>();
-        return createToken(claims, email);
+    private Key getSigningKey() {
+        return Keys.hmacShaKeyFor(secret.getBytes());
     }
 
     /**
-     * Create token
+     * ✅ Generate token with userId (not email)
      */
-    private String createToken(Map<String, Object> claims, String subject) {
-        Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + expiration);
-
+    public String generateToken(Long userId) {
         return Jwts.builder()
-                .claims(claims)
-                .subject(subject)
-                .issuedAt(now)
-                .expiration(expiryDate)
-                .signWith(getSigningKey())
+                .setSubject(userId.toString())  // Store userId
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + expiration))
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
     /**
-     * Get signing key
+     * ✅ Extract userId from token
      */
-    private SecretKey getSigningKey() {
-        byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
-        return Keys.hmacShaKeyFor(keyBytes);
-    }
+    public Long extractUserId(String token) {
+        // Remove "Bearer " prefix if present
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        }
 
-    /**
-     * Extract email from token
-     */
-    public String extractEmail(String token) {
-        return extractClaim(token, Claims::getSubject);
-    }
-
-    /**
-     * Extract expiration date
-     */
-    public Date extractExpiration(String token) {
-        return extractClaim(token, Claims::getExpiration);
-    }
-
-    /**
-     * Extract specific claim
-     */
-    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
-        final Claims claims = extractAllClaims(token);
-        return claimsResolver.apply(claims);
-    }
-
-    /**
-     * Extract all claims (UPDATED for JJWT 0.12.x)
-     */
-    private Claims extractAllClaims(String token) {
-        return Jwts.parser()
-                .verifyWith(getSigningKey())
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
                 .build()
-                .parseSignedClaims(token)
-                .getPayload();
+                .parseClaimsJws(token)
+                .getBody();
+
+        return Long.parseLong(claims.getSubject());
     }
 
     /**
-     * Check if token is expired
+     * Validate token
      */
-    public Boolean isTokenExpired(String token) {
-        return extractExpiration(token).before(new Date());
-    }
-
-    /**
-     * Validate token with email
-     */
-    public Boolean validateToken(String token, String email) {
+    public boolean validateToken(String token) {
         try {
-            final String tokenEmail = extractEmail(token);
-            return (tokenEmail.equals(email) && !isTokenExpired(token));
+            if (token != null && token.startsWith("Bearer ")) {
+                token = token.substring(7);
+            }
+            Jwts.parserBuilder()
+                    .setSigningKey(getSigningKey())
+                    .build()
+                    .parseClaimsJws(token);
+            return true;
         } catch (Exception e) {
-            log.error("Token validation failed: {}", e.getMessage());
             return false;
         }
     }
 
     /**
-     * Validate token (without email check)
+     * Check if token is expired
      */
-    public Boolean validateToken(String token) {
+    public boolean isTokenExpired(String token) {
         try {
-            extractAllClaims(token);
-            return !isTokenExpired(token);
+            if (token != null && token.startsWith("Bearer ")) {
+                token = token.substring(7);
+            }
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(getSigningKey())
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+
+            return claims.getExpiration().before(new Date());
         } catch (Exception e) {
-            log.error("Token validation failed: {}", e.getMessage());
-            return false;
+            return true;
         }
     }
 }

@@ -6,7 +6,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
-
 @Entity
 @Table(name = "doctors")
 @Data
@@ -22,28 +21,11 @@ public class Doctor {
     @Column(unique = true, nullable = false)
     private String email;
 
-    private String password;  // Set by admin
-    private String googleId;  // NULL if only email/password
+    private String password;   // Set by admin
+    private String googleId;   // NULL if only email/password
 
     private String phoneNumber;
     private String imageUrl;
     private String specialization;  // e.g., "Cardiologist", "Dermatologist"
     private String fcmToken;
-
-    @Column(name = "created_at", updatable = false)
-    private Instant createdAt;
-
-    @Column(name = "updated_at")
-    private Instant updatedAt;
-
-    @PrePersist
-    protected void onCreate() {
-        createdAt = Instant.now();
-        updatedAt = Instant.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = Instant.now();
-    }
 }

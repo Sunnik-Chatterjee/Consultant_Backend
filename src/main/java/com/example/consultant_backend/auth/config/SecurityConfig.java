@@ -35,6 +35,7 @@ public class SecurityConfig {
                                 "/api/auth/user/verify-otp",
                                 "/api/auth/user/login",
                                 "/api/auth/user/google-signin",
+                                "/api/auth/user/signup",
                                 "/api/auth/user/forgot-password",
                                 "/api/auth/user/reset-password",
                                 "/api/auth/doctor/login",
