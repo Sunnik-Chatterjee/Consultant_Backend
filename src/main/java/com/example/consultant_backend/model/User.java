@@ -26,6 +26,8 @@ public class User {
     private String gender;
     private String phoneNumber;
     private String previousDisease;
+    @Column(name = "email_verified")
+    private Boolean emailVerified = false;
 
     private String fcmToken;
     private String imageUrl;
