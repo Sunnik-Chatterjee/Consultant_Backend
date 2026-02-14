@@ -24,7 +24,11 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 // Disable CSRF (not needed for REST APIs with JWT)
-                .csrf(AbstractHttpConfigurer::disable)
+                .csrf(
+                        csrf -> csrf
+                                .ignoringRequestMatchers("/ws/**")
+                                .disable()
+                )
 
                 // Configure endpoint authorization
                 .authorizeHttpRequests(auth -> auth
