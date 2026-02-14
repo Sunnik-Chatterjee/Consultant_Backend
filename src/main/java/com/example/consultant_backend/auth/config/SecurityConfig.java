@@ -54,7 +54,8 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/swagger-resources/**",
                                 "/webjars/**",
-                                "/health",
+                                "/health","/dev/**",
+                                "/ws/**",
 
                                 // Error page
                                 "/error"
