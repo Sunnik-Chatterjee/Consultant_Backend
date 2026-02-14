@@ -20,7 +20,7 @@ public class UserAuthController {
     private final AuthService authService;
 
     /**
-     * ✅ Signup - Register with email/password (sends OTP)
+     * ✅ Signup - Register with email/password + optional profile data (sends OTP)
      */
     @PostMapping("/signup")
     public ResponseEntity<ApiResponse<String>> signUp(@Valid @RequestBody AuthRequestDTO request) {
@@ -38,6 +38,17 @@ public class UserAuthController {
         AuthResponseDTO response = authService.verifyRegistrationOtp(request);
         return ResponseEntity.ok(
                 ApiResponse.success("Registration successful", response)
+        );
+    }
+
+    /**
+     * ✅ Resend OTP - For registration
+     */
+    @PostMapping("/resend-otp")
+    public ResponseEntity<ApiResponse<String>> resendOtp(@RequestParam String email) {
+        authService.resendRegistrationOtp(email);
+        return ResponseEntity.ok(
+                ApiResponse.success("OTP resent to your email")
         );
     }
 
@@ -64,7 +75,7 @@ public class UserAuthController {
     }
 
     /**
-     * Forgot Password
+     * ✅ Forgot Password - Send reset OTP
      */
     @PostMapping("/forgot-password")
     public ResponseEntity<ApiResponse<String>> forgotPassword(@RequestParam String email) {
@@ -75,7 +86,7 @@ public class UserAuthController {
     }
 
     /**
-     * Reset Password
+     * ✅ Reset Password - Verify OTP and set new password
      */
     @PostMapping("/reset-password")
     public ResponseEntity<ApiResponse<String>> resetPassword(@Valid @RequestBody AuthRequestDTO request) {
