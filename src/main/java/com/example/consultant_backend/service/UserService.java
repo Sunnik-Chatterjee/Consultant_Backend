@@ -44,11 +44,11 @@ public class UserService {
     /**
      * Get user by ID
      */
-    public User getUserById(Long userId) {
-        log.info("🔍 Fetching user by ID: {}", userId);
-        return userRepo.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
+    public User getUserById(Long id) {
+        return userRepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
     }
+
 
     /**
      * Get user's appointments

@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -23,10 +24,10 @@ import java.util.List;
 @Slf4j
 public class DoctorController {
 
-    @Autowired
-    private DoctorService doctorService;
-    @Autowired
-    private PrescriptionService prescriptionService;
+
+    private final DoctorService doctorService;
+
+    private final PrescriptionService prescriptionService;
 
     /**
      * Get all doctors (Public endpoint)
@@ -62,15 +63,11 @@ public class DoctorController {
      */
     @GetMapping("/profile")
     public ResponseEntity<ApiResponse<Doctor>> getCurrentDoctorProfile(
-            @AuthenticationPrincipal UserDetails userDetails
+            Authentication authentication
     ) {
-        log.info("📋 Get profile request from doctor: {}", userDetails.getUsername());
-
-        Doctor doctor = doctorService.getDoctorByEmail(userDetails.getUsername());
-
-        return ResponseEntity.ok(
-                ApiResponse.success("Doctor profile retrieved", doctor)
-        );
+        String email = (String) authentication.getPrincipal();
+        Doctor doctor = doctorService.getDoctorByEmail(email);
+        return ResponseEntity.ok(ApiResponse.success("Doctor profile retrieved", doctor));
     }
 
     /**

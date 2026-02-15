@@ -7,8 +7,8 @@ import com.example.consultant_backend.model.User;
 import com.example.consultant_backend.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -30,16 +30,14 @@ public class UserController {
      */
     @GetMapping("/profile")
     public ResponseEntity<ApiResponse<User>> getCurrentUserProfile(
-            @AuthenticationPrincipal UserDetails userDetails
+            Authentication authentication
     ) {
-        log.info("📋 Get profile request from: {}", userDetails.getUsername());
-
-        User user = userService.getUserByEmail(userDetails.getUsername());
-
-        return ResponseEntity.ok(
-                ApiResponse.success("User profile retrieved", user)
-        );
+        Long userId = (Long) authentication.getPrincipal();
+        User user = userService.getUserById(userId);
+        return ResponseEntity.ok(ApiResponse.success("User profile retrieved", user));
     }
+
+
 
     /**
      * Get user by ID

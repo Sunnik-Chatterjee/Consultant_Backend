@@ -24,10 +24,10 @@ import java.util.Map;
 @CrossOrigin(origins = "*")
 public class AppointmentController {
 
-    @Autowired
-    private AppointmentService appointmentService;
-    @Autowired
-    private SimpMessagingTemplate messagingTemplate;
+
+    private final AppointmentService appointmentService;
+
+    private final SimpMessagingTemplate messagingTemplate;
 
     @PostMapping("/book")
     public ResponseEntity<ApiResponse<Appointment>> bookAppointment(
