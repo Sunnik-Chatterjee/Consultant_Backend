@@ -9,8 +9,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -33,11 +31,15 @@ public class UserController {
             Authentication authentication
     ) {
         Long userId = (Long) authentication.getPrincipal();
+
+        log.info("📋 Get profile request from userId: {}", userId);
+
         User user = userService.getUserById(userId);
-        return ResponseEntity.ok(ApiResponse.success("User profile retrieved", user));
+
+        return ResponseEntity.ok(
+                ApiResponse.success("User profile retrieved", user)
+        );
     }
-
-
 
     /**
      * Get user by ID
@@ -72,12 +74,13 @@ public class UserController {
      */
     @GetMapping("/appointments")
     public ResponseEntity<ApiResponse<List<Appointment>>> getCurrentUserAppointments(
-            @AuthenticationPrincipal UserDetails userDetails
+            Authentication authentication
     ) {
-        log.info("📅 Get appointments for user: {}", userDetails.getUsername());
+        Long userId = (Long) authentication.getPrincipal();
 
-        User user = userService.getUserByEmail(userDetails.getUsername());
-        List<Appointment> appointments = userService.getUserAppointments(user.getId());
+        log.info("📅 Get appointments for userId: {}", userId);
+
+        List<Appointment> appointments = userService.getUserAppointments(userId);
 
         return ResponseEntity.ok(
                 ApiResponse.success("Appointments retrieved", appointments)
@@ -106,13 +109,14 @@ public class UserController {
      */
     @PutMapping("/profile")
     public ResponseEntity<ApiResponse<User>> updateCurrentUserProfile(
-            @AuthenticationPrincipal UserDetails userDetails,
+            Authentication authentication,
             @RequestBody UpdateUserProfileDTO updateDTO
     ) {
-        log.info("✏️ Update profile request from user: {}", userDetails.getUsername());
+        Long userId = (Long) authentication.getPrincipal();
 
-        User user = userService.getUserByEmail(userDetails.getUsername());
-        User updatedUser = userService.updateUserProfile(user.getId(), updateDTO);
+        log.info("✏️ Update profile request from userId: {}", userId);
+
+        User updatedUser = userService.updateUserProfile(userId, updateDTO);
 
         return ResponseEntity.ok(
                 ApiResponse.success("Profile updated successfully", updatedUser)
