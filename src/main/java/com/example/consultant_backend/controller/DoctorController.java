@@ -7,11 +7,8 @@ import com.example.consultant_backend.service.DoctorService;
 import com.example.consultant_backend.service.PrescriptionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -24,9 +21,7 @@ import java.util.List;
 @Slf4j
 public class DoctorController {
 
-
     private final DoctorService doctorService;
-
     private final PrescriptionService prescriptionService;
 
     /**
@@ -66,8 +61,14 @@ public class DoctorController {
             Authentication authentication
     ) {
         String email = (String) authentication.getPrincipal();
+
+        log.info("📋 Get profile request from doctor: {}", email);
+
         Doctor doctor = doctorService.getDoctorByEmail(email);
-        return ResponseEntity.ok(ApiResponse.success("Doctor profile retrieved", doctor));
+
+        return ResponseEntity.ok(
+                ApiResponse.success("Doctor profile retrieved", doctor)
+        );
     }
 
     /**
@@ -75,11 +76,13 @@ public class DoctorController {
      */
     @GetMapping("/appointments")
     public ResponseEntity<ApiResponse<List<Appointment>>> getCurrentDoctorAppointments(
-            @AuthenticationPrincipal UserDetails userDetails
+            Authentication authentication
     ) {
-        log.info("📅 Get appointments for doctor: {}", userDetails.getUsername());
+        String email = (String) authentication.getPrincipal();
 
-        Doctor doctor = doctorService.getDoctorByEmail(userDetails.getUsername());
+        log.info("📅 Get appointments for doctor: {}", email);
+
+        Doctor doctor = doctorService.getDoctorByEmail(email);
         List<Appointment> appointments = doctorService.getDoctorAppointments(doctor.getId());
 
         return ResponseEntity.ok(
@@ -92,12 +95,14 @@ public class DoctorController {
      */
     @PutMapping("/profile")
     public ResponseEntity<ApiResponse<Doctor>> updateCurrentDoctorProfile(
-            @AuthenticationPrincipal UserDetails userDetails,
+            Authentication authentication,
             @RequestBody Doctor updatedDoctor
     ) {
-        log.info("✏️ Update profile for doctor: {}", userDetails.getUsername());
+        String email = (String) authentication.getPrincipal();
 
-        Doctor doctor = doctorService.getDoctorByEmail(userDetails.getUsername());
+        log.info("✏️ Update profile for doctor: {}", email);
+
+        Doctor doctor = doctorService.getDoctorByEmail(email);
         Doctor updated = doctorService.updateDoctorProfile(doctor.getId(), updatedDoctor);
 
         return ResponseEntity.ok(
