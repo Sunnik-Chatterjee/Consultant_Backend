@@ -60,10 +60,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             // Remove "Bearer " prefix
             String token = authHeader.substring(7);
+            log.debug("🔑 Processing token for path: {}", path);
 
             // Validate token first
             if (!jwtService.validateToken(token)) {
-                log.warn("Invalid JWT token for path: {}", path);
+                log.warn("❌ Invalid JWT token for path: {}", path);
                 filterChain.doFilter(request, response);
                 return;
             }
@@ -71,36 +72,41 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             // Only proceed if no authentication is set yet
             if (SecurityContextHolder.getContext().getAuthentication() == null) {
 
-                // ✅ Check if this is a doctor endpoint
-                if (path.startsWith("/api/doctors/")) {
+                // ✅ Extract user type from token
+                String userType = jwtService.extractUserType(token);
+                log.debug("🔍 User type from token: {}", userType);
+
+                if ("DOCTOR".equals(userType)) {
                     authenticateDoctor(token, request);
-                } else {
-                    // ✅ Default to user authentication
+                } else if ("PATIENT".equals(userType)) {
                     authenticateUser(token, request);
+                } else {
+                    log.warn("❌ Unknown or missing user type in token: {}", userType);
                 }
             }
 
         } catch (Exception e) {
-            log.error("JWT authentication error: {}", e.getMessage(), e);
+            log.error("❌ JWT authentication error: {}", e.getMessage(), e);
         }
 
         filterChain.doFilter(request, response);
     }
 
     /**
-     * ✅ Authenticate Doctor (using email)
+     * ✅ Authenticate Doctor (using doctor ID from subject)
      */
     private void authenticateDoctor(String token, HttpServletRequest request) {
         try {
-            String email = jwtService.extractEmail(token);
+            Long doctorId = jwtService.extractDoctorId(token);
+            log.debug("🔍 Extracted doctorId: {}", doctorId);
 
-            if (email != null) {
-                Doctor doctor = doctorRepo.findByEmail(email).orElse(null);
+            if (doctorId != null) {
+                Doctor doctor = doctorRepo.findById(doctorId).orElse(null);
 
                 if (doctor != null) {
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(
-                                    email,  // Store email as String
+                                    doctorId,  // ✅ Store doctorId as principal
                                     null,
                                     Collections.emptyList()
                             );
@@ -110,24 +116,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     );
 
                     SecurityContextHolder.getContext().setAuthentication(authToken);
-                    log.debug("✅ Doctor authentication successful for email: {}", email);
+                    log.info("✅ Doctor authenticated successfully: {} ({})",
+                            doctor.getName(), doctorId);
                 } else {
-                    log.warn("❌ Doctor not found for email: {}", email);
+                    log.warn("❌ Doctor not found for doctorId: {}", doctorId);
                 }
             } else {
-                log.warn("❌ Could not extract email from doctor token");
+                log.warn("❌ Could not extract doctorId from token");
             }
         } catch (Exception e) {
-            log.error("❌ Doctor authentication failed: {}", e.getMessage());
+            log.error("❌ Doctor authentication failed: {}", e.getMessage(), e);
         }
     }
 
     /**
-     * ✅ Authenticate User (using userId)
+     * ✅ Authenticate User/Patient (using userId from subject)
      */
     private void authenticateUser(String token, HttpServletRequest request) {
         try {
             Long userId = jwtService.extractUserId(token);
+            log.debug("🔍 Extracted userId: {}", userId);
 
             if (userId != null) {
                 User user = userRepo.findById(userId).orElse(null);
@@ -135,7 +143,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 if (user != null) {
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(
-                                    userId,  // Store userId as Long
+                                    userId,  // ✅ Store userId as principal
                                     null,
                                     Collections.emptyList()
                             );
@@ -145,15 +153,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     );
 
                     SecurityContextHolder.getContext().setAuthentication(authToken);
-                    log.debug("✅ User authentication successful for userId: {}", userId);
+                    log.info("✅ Patient authenticated successfully: {} ({})",
+                            user.getName(), userId);
                 } else {
                     log.warn("❌ User not found for userId: {}", userId);
                 }
             } else {
-                log.warn("❌ Could not extract userId from user token");
+                log.warn("❌ Could not extract userId from token");
             }
         } catch (Exception e) {
-            log.error("❌ User authentication failed: {}", e.getMessage());
+            log.error("❌ User authentication failed: {}", e.getMessage(), e);
         }
     }
 
@@ -166,8 +175,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return true;
         }
 
-        // ✅ Public doctor endpoints (GET only)
-        if (path.equals("/api/doctors") || path.matches("/api/doctors/\\d+")) {
+        // ✅ Public doctor endpoints (only list all)
+        if (path.equals("/api/doctors/all")) {
             return true;
         }
 
@@ -180,6 +189,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 path.equals("/error") ||
                 path.equals("/health") ||
                 path.startsWith("/dev") ||
+                path.startsWith("/ws") ||
                 path.equals("/actuator/health");
     }
 }

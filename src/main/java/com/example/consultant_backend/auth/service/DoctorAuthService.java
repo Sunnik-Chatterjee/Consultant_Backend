@@ -71,10 +71,10 @@ public class DoctorAuthService {
         Doctor doctor = doctorRepo.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("Doctor not found"));
 
-        // ✅ Generate token with EMAIL for doctors
-        String token = jwtService.generateTokenWithEmail(doctor.getEmail());
+        // ✅ Generate DOCTOR token with doctorId and email
+        String token = jwtService.generateDoctorToken(doctor.getId(), doctor.getEmail());
 
-        log.info("✅ Doctor logged in after OTP verification: {}", doctor.getEmail());
+        log.info("✅ Doctor logged in after OTP verification: {} (ID: {})", doctor.getEmail(), doctor.getId());
         return authMapper.toAuthResponse(doctor, token);
     }
 
@@ -107,10 +107,10 @@ public class DoctorAuthService {
             log.info("Google account linked for doctor: {}", email);
         }
 
-        // ✅ Generate JWT token with EMAIL (No OTP needed for Google)
-        String token = jwtService.generateTokenWithEmail(doctor.getEmail());
+        // ✅ Generate DOCTOR token with doctorId and email
+        String token = jwtService.generateDoctorToken(doctor.getId(), doctor.getEmail());
 
-        log.info("✅ Doctor logged in via Google: {}", email);
+        log.info("✅ Doctor logged in via Google: {} (ID: {})", email, doctor.getId());
         return authMapper.toAuthResponse(doctor, token);
     }
 
