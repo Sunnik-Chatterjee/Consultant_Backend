@@ -27,7 +27,7 @@ public class DoctorController {
     /**
      * Get all doctors (Public endpoint)
      */
-    @GetMapping
+    @GetMapping("/all")
     public ResponseEntity<ApiResponse<List<Doctor>>> getAllDoctors() {
         log.info("📋 Get all doctors");
 
@@ -60,11 +60,12 @@ public class DoctorController {
     public ResponseEntity<ApiResponse<Doctor>> getCurrentDoctorProfile(
             Authentication authentication
     ) {
-        String email = (String) authentication.getPrincipal();
+        // ✅ FIXED: Cast to Long instead of String
+        Long doctorId = (Long) authentication.getPrincipal();
 
-        log.info("📋 Get profile request from doctor: {}", email);
+        log.info("📋 Get profile request from doctor ID: {}", doctorId);
 
-        Doctor doctor = doctorService.getDoctorByEmail(email);
+        Doctor doctor = doctorService.getDoctorById(doctorId);
 
         return ResponseEntity.ok(
                 ApiResponse.success("Doctor profile retrieved", doctor)
@@ -78,12 +79,12 @@ public class DoctorController {
     public ResponseEntity<ApiResponse<List<Appointment>>> getCurrentDoctorAppointments(
             Authentication authentication
     ) {
-        String email = (String) authentication.getPrincipal();
+        // ✅ FIXED: Cast to Long instead of String
+        Long doctorId = (Long) authentication.getPrincipal();
 
-        log.info("📅 Get appointments for doctor: {}", email);
+        log.info("📅 Get appointments for doctor ID: {}", doctorId);
 
-        Doctor doctor = doctorService.getDoctorByEmail(email);
-        List<Appointment> appointments = doctorService.getDoctorAppointments(doctor.getId());
+        List<Appointment> appointments = doctorService.getDoctorAppointments(doctorId);
 
         return ResponseEntity.ok(
                 ApiResponse.success("Appointments retrieved", appointments)
@@ -98,12 +99,12 @@ public class DoctorController {
             Authentication authentication,
             @RequestBody Doctor updatedDoctor
     ) {
-        String email = (String) authentication.getPrincipal();
+        // ✅ FIXED: Cast to Long instead of String
+        Long doctorId = (Long) authentication.getPrincipal();
 
-        log.info("✏️ Update profile for doctor: {}", email);
+        log.info("✏️ Update profile for doctor ID: {}", doctorId);
 
-        Doctor doctor = doctorService.getDoctorByEmail(email);
-        Doctor updated = doctorService.updateDoctorProfile(doctor.getId(), updatedDoctor);
+        Doctor updated = doctorService.updateDoctorProfile(doctorId, updatedDoctor);
 
         return ResponseEntity.ok(
                 ApiResponse.success("Profile updated successfully", updated)
@@ -117,9 +118,13 @@ public class DoctorController {
     public ResponseEntity<ApiResponse<Appointment>> uploadImages(
             @PathVariable Long appointmentId,
             @RequestParam(value = "prescriptionImage", required = false) MultipartFile prescriptionImage,
-            @RequestParam(value = "medicineImage", required = false) MultipartFile medicineImage
+            @RequestParam(value = "medicineImage", required = false) MultipartFile medicineImage,
+            Authentication authentication
     ) {
-        log.info("📤 Upload images for appointment: {}", appointmentId);
+        // ✅ ADDED: Verify doctor owns this appointment
+        Long doctorId = (Long) authentication.getPrincipal();
+
+        log.info("📤 Doctor {} uploading images for appointment: {}", doctorId, appointmentId);
 
         if (prescriptionImage == null && medicineImage == null) {
             return ResponseEntity.badRequest()
