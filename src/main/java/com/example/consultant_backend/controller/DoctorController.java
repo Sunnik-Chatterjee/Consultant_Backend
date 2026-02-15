@@ -121,9 +121,14 @@ public class DoctorController {
             @RequestParam(value = "medicineImage", required = false) MultipartFile medicineImage,
             Authentication authentication
     ) {
-        // ✅ ADDED: Verify doctor owns this appointment
-        Long doctorId = (Long) authentication.getPrincipal();
+        // ✅ ADD THIS LOG AT THE VERY START
+        log.info("🔵 ============================================");
+        log.info("🔵 UPLOAD REQUEST RECEIVED for appointment: {}", appointmentId);
+        log.info("🔵 Prescription: {}", prescriptionImage != null ? prescriptionImage.getSize() + " bytes" : "null");
+        log.info("🔵 Medicine: {}", medicineImage != null ? medicineImage.getSize() + " bytes" : "null");
+        log.info("🔵 ============================================");
 
+        Long doctorId = (Long) authentication.getPrincipal();
         log.info("📤 Doctor {} uploading images for appointment: {}", doctorId, appointmentId);
 
         if (prescriptionImage == null && medicineImage == null) {
@@ -131,14 +136,24 @@ public class DoctorController {
                     .body(ApiResponse.error("At least one image (prescription or medicine) must be provided"));
         }
 
-        Appointment appointment = prescriptionService.uploadImages(
-                appointmentId,
-                prescriptionImage,
-                medicineImage
-        );
+        try {
+            Appointment appointment = prescriptionService.uploadImages(
+                    appointmentId,
+                    prescriptionImage,
+                    medicineImage
+            );
 
-        return ResponseEntity.ok(
-                ApiResponse.success("Images uploaded successfully", appointment)
-        );
+            log.info("✅ Images uploaded successfully for appointment: {}", appointmentId);
+
+            return ResponseEntity.ok(
+                    ApiResponse.success("Images uploaded successfully", appointment)
+            );
+
+        } catch (Exception e) {
+            log.error("❌ Upload failed for appointment {}: {}", appointmentId, e.getMessage(), e);
+            return ResponseEntity.status(500)
+                    .body(ApiResponse.error("Upload failed: " + e.getMessage()));
+        }
     }
+
 }

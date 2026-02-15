@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 
 import java.io.IOException;
 
@@ -65,4 +66,12 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error("An unexpected error occurred"));
     }
+
+    @ExceptionHandler(MultipartException.class)
+    public ResponseEntity<ApiResponse<String>> handleMultipartException(MultipartException exc) {
+        log.error("❌ Multipart upload error: {}", exc.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error("Upload error: " + exc.getMessage()));
+    }
+
 }
